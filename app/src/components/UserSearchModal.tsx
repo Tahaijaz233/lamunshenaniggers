@@ -22,7 +22,7 @@ const UserSearchModal: React.FC<UserSearchModalProps> = ({
   const [isSearching, setIsSearching] = useState(false);
   const [addedUsers, setAddedUsers] = useState<string[]>([]);
 
-  const existingContactIds = (existingContacts || []).map(c => c.id);
+  const existingContactIds = (existingContacts || []).map(c => c.id || c._id);
 
   useEffect(() => {
     const searchUsers = async () => {
@@ -55,6 +55,8 @@ const UserSearchModal: React.FC<UserSearchModalProps> = ({
       // Error handled in parent
     }
   };
+
+  const getUserId = (user: User) => user.id || user._id;
 
   const getInitials = (name: string) => {
     return name
@@ -116,12 +118,13 @@ const UserSearchModal: React.FC<UserSearchModalProps> = ({
           ) : (
             <div className="space-y-2">
               {(searchResults || []).map((user) => {
-                const isExisting = existingContactIds.includes(user.id);
-                const isAdded = addedUsers.includes(user.id);
+                const userId = getUserId(user);
+                const isExisting = existingContactIds.includes(userId);
+                const isAdded = addedUsers.includes(userId);
 
                 return (
                   <div
-                    key={user.id}
+                    key={userId}
                     className="flex items-center gap-3 p-3 bg-[#1a1a1a] rounded-lg"
                   >
                     <Avatar className="w-12 h-12">
@@ -147,7 +150,7 @@ const UserSearchModal: React.FC<UserSearchModalProps> = ({
                       </Button>
                     ) : (
                       <Button
-                        onClick={() => handleAddContact(user.id)}
+                        onClick={() => handleAddContact(userId)}
                         className="btn-gold"
                         size="sm"
                       >

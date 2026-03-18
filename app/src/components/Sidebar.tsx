@@ -1,10 +1,10 @@
 import React, { useState } from 'react';
-import { 
-  Search, 
-  MessageSquare, 
-  Users, 
-  Settings, 
-  LogOut, 
+import {
+  Search,
+  MessageSquare,
+  Users,
+  Settings,
+  LogOut,
   Plus,
   ChevronLeft,
   ChevronRight,
@@ -20,6 +20,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
+import { toast } from 'sonner';
 import type { User, Group } from '@/types';
 
 interface SidebarProps {
@@ -85,6 +86,12 @@ const Sidebar: React.FC<SidebarProps> = ({
     if (hours < 24) return `${hours}h ago`;
     if (days < 7) return `${days}d ago`;
     return date.toLocaleDateString();
+  };
+
+  const getUserId = (user: User) => user.id || user._id;
+
+  const handleSettingsClick = () => {
+    toast.info('Settings coming soon!');
   };
 
   return (
@@ -203,12 +210,13 @@ const Sidebar: React.FC<SidebarProps> = ({
                     </div>
                   ) : (
                     filteredContacts.map((contact) => {
-                      const isOnline = onlineUsers.includes(contact.id);
-                      const isSelected = chatType === 'direct' && (selectedChat as User)?.id === contact.id;
+                      const contactId = getUserId(contact);
+                      const isOnline = onlineUsers.includes(contactId);
+                      const isSelected = chatType === 'direct' && (selectedChat as User)?.id === contactId;
 
                       return (
                         <div
-                          key={contact.id}
+                          key={contactId}
                           onClick={() => onSelectChat(contact, 'direct')}
                           className={`
                             flex items-center gap-3 p-3 rounded-lg cursor-pointer transition-all
@@ -327,12 +335,15 @@ const Sidebar: React.FC<SidebarProps> = ({
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end" className="bg-[#1a1a1a] border-[#2d2d2d]">
-                  <DropdownMenuItem className="text-gray-300 focus:bg-[#2d2d2d] focus:text-white">
+                  <DropdownMenuItem
+                    onClick={handleSettingsClick}
+                    className="text-gray-300 focus:bg-[#2d2d2d] focus:text-white cursor-pointer"
+                  >
                     <Settings className="w-4 h-4 mr-2" />
                     Settings
                   </DropdownMenuItem>
                   <DropdownMenuSeparator className="bg-[#2d2d2d]" />
-                  <DropdownMenuItem 
+                  <DropdownMenuItem
                     onClick={onLogout}
                     className="text-red-400 focus:bg-[#2d2d2d] focus:text-red-400"
                   >
