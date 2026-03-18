@@ -49,11 +49,11 @@ const connectDB = async () => {
 
 connectDB();
 
-// Import Models
-const { User, Message, Group, Sticker, Call } = require('./models');
+// Import Models (from backend/models folder)
+const { User, Message, Group, Sticker, Call } = require('./backend/models');
 
-// Import Middleware
-const { authMiddleware } = require('./middleware/auth');
+// Import Middleware (from backend/middleware folder)
+const { authMiddleware } = require('./backend/middleware/auth');
 
 // ==================== AUTH ROUTES ====================
 
@@ -77,7 +77,7 @@ app.post('/api/auth/register', async (req, res) => {
 
     await user.save();
 
-    const { generateToken } = require('./middleware/auth');
+    const { generateToken } = require('./backend/middleware/auth');
     const token = generateToken(user._id);
 
     res.status(201).json({
@@ -117,7 +117,7 @@ app.post('/api/auth/login', async (req, res) => {
     user.status = 'online';
     await user.save();
 
-    const { generateToken } = require('./middleware/auth');
+    const { generateToken } = require('./backend/middleware/auth');
     const token = generateToken(user._id);
 
     res.json({
