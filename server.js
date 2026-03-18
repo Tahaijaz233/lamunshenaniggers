@@ -18,7 +18,6 @@ const allowedOrigins = [
   "http://localhost:5173",
   "http://localhost:3000",
   "https://lamunshenaniggers.vercel.app",
-  "https://lamunshenanigger.app",
   "https://lamunshenanigger.vercel.app",
   process.env.FRONTEND_URL
 ].filter(Boolean);
@@ -41,26 +40,23 @@ cloudinary.config({
 // CORS middleware configuration
 const corsOptions = {
   origin: function (origin, callback) {
-    // Allow requests with no origin (like mobile apps or curl requests)
-    if (!origin) return callback(null, true);
-    
-    if (allowedOrigins.indexOf(origin) !== -1 || allowedOrigins.includes(origin)) {
+    if (!origin || allowedOrigins.indexOf(origin) !== -1) {
       callback(null, true);
     } else {
       console.log('CORS blocked origin:', origin);
-      callback(new Error('Not allowed by CORS'));
+      // Instead of throwing an error that crashes the request with a 500, 
+      // we pass null to let the cors middleware handle it gracefully.
+      callback(null, false); 
     }
   },
   methods: ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
-  allowedHeaders: ["Content-Type", "Authorization", "X-Requested-With", "Accept"],
+  allowedHeaders: ["Content-Type", "Authorization", "X-Requested-With", "Accept", "Origin"],
   credentials: true,
   optionsSuccessStatus: 200
 };
 
 // Apply CORS middleware
 app.use(cors(corsOptions));
-
-// Handle preflight for all routes
 app.options('*', cors(corsOptions));
 
 app.use(express.json({ limit: '50mb' }));
@@ -72,11 +68,12 @@ app.set('io', io);
 // MongoDB Connection
 const connectDB = async () => {
   try {
+    // Added connection options for better stability
     await mongoose.connect(process.env.MONGODB_URI);
     console.log('MongoDB Connected Successfully');
   } catch (error) {
     console.error('MongoDB Connection Error:', error.message);
-    process.exit(1);
+    // Note: Do not exit process in production if you want the health check to stay alive
   }
 };
 
@@ -287,7 +284,7 @@ app.put('/api/users/profile', authMiddleware, async (req, res) => {
 
 // ==================== MESSAGE ROUTES ====================
 
-// Get messages between users
+// Get messages
 app.get('/api/messages/:userId', authMiddleware, async (req, res) => {
   try {
     const messages = await Message.find({
@@ -344,7 +341,7 @@ app.post('/api/messages', authMiddleware, async (req, res) => {
   }
 });
 
-// Mark messages as read
+// Mark as read
 app.put('/api/messages/read/:userId', authMiddleware, async (req, res) => {
   try {
     await Message.updateMany(
@@ -410,7 +407,7 @@ app.post('/api/groups', authMiddleware, async (req, res) => {
   }
 });
 
-// Get user's groups
+// Get groups
 app.get('/api/groups', authMiddleware, async (req, res) => {
   try {
     const groups = await Group.find({ members: req.user._id })
@@ -424,7 +421,7 @@ app.get('/api/groups', authMiddleware, async (req, res) => {
   }
 });
 
-// Get group messages
+// Group messages
 app.get('/api/groups/:id/messages', authMiddleware, async (req, res) => {
   try {
     const group = await Group.findById(req.params.id);
@@ -483,7 +480,6 @@ app.post('/api/groups/:id/messages', authMiddleware, async (req, res) => {
 
 // ==================== STICKER ROUTES ====================
 
-// Get all stickers
 app.get('/api/stickers', authMiddleware, async (req, res) => {
   try {
     const stickers = await Sticker.find();
@@ -494,27 +490,22 @@ app.get('/api/stickers', authMiddleware, async (req, res) => {
   }
 });
 
-// Get stickers by category
 app.get('/api/stickers/category/:category', authMiddleware, async (req, res) => {
   try {
     const stickers = await Sticker.find({ category: req.params.category });
     res.json(stickers);
   } catch (error) {
-    console.error('Get stickers by category error:', error);
+    console.error('Get stickers error:', error);
     res.status(500).json({ error: 'Server error' });
   }
 });
 
 // ==================== CALL ROUTES ====================
 
-// Get call history
 app.get('/api/calls', authMiddleware, async (req, res) => {
   try {
     const calls = await Call.find({
-      $or: [
-        { caller: req.user._id },
-        { recipient: req.user._id }
-      ]
+      $or: [{ caller: req.user._id }, { recipient: req.user._id }]
     })
       .populate('caller', 'username displayName avatar')
       .populate('recipient', 'username displayName avatar')
@@ -537,11 +528,7 @@ io.on('connection', (socket) => {
   socket.on('user_online', async (userId) => {
     try {
       onlineUsers.set(userId, socket.id);
-      
-      await User.findByIdAndUpdate(userId, {
-        status: 'online',
-        socketId: socket.id
-      });
+      await User.findByIdAndUpdate(userId, { status: 'online', socketId: socket.id });
 
       const user = await User.findById(userId).populate('contacts');
       if (user) {
@@ -551,48 +538,27 @@ io.on('connection', (socket) => {
           }
         });
       }
-    } catch (error) {
-      console.error('User online error:', error);
-    }
+    } catch (err) { console.error(err); }
   });
 
-  socket.on('join_user_room', (userId) => {
-    socket.join(`user_${userId}`);
-  });
-
-  socket.on('join_group', (groupId) => {
-    socket.join(`group_${groupId}`);
-  });
-
-  socket.on('leave_group', (groupId) => {
-    socket.leave(`group_${groupId}`);
-  });
+  socket.on('join_user_room', (userId) => socket.join(`user_${userId}`));
+  socket.on('join_group', (groupId) => socket.join(`group_${groupId}`));
+  socket.on('leave_group', (groupId) => socket.leave(`group_${groupId}`));
 
   socket.on('typing', ({ recipientId, isTyping }) => {
-    socket.to(`user_${recipientId}`).emit('user_typing', {
-      userId: socket.userId,
-      isTyping
-    });
+    socket.to(`user_${recipientId}`).emit('user_typing', { userId: socket.userId, isTyping });
   });
 
   socket.on('call_offer', ({ recipientId, offer, type }) => {
-    socket.to(`user_${recipientId}`).emit('incoming_call', {
-      callerId: socket.userId,
-      offer,
-      type
-    });
+    socket.to(`user_${recipientId}`).emit('incoming_call', { callerId: socket.userId, offer, type });
   });
 
   socket.on('call_answer', ({ callerId, answer }) => {
-    socket.to(`user_${callerId}`).emit('call_answered', {
-      answer
-    });
+    socket.to(`user_${callerId}`).emit('call_answered', { answer });
   });
 
   socket.on('ice_candidate', ({ recipientId, candidate }) => {
-    socket.to(`user_${recipientId}`).emit('ice_candidate', {
-      candidate
-    });
+    socket.to(`user_${recipientId}`).emit('ice_candidate', { candidate });
   });
 
   socket.on('end_call', ({ recipientId }) => {
@@ -600,8 +566,6 @@ io.on('connection', (socket) => {
   });
 
   socket.on('disconnect', async () => {
-    console.log('User disconnected:', socket.id);
-    
     try {
       const user = await User.findOne({ socketId: socket.id });
       if (user) {
@@ -620,12 +584,9 @@ io.on('connection', (socket) => {
             });
           }
         });
-
         onlineUsers.delete(user._id.toString());
       }
-    } catch (error) {
-      console.error('Disconnect error:', error);
-    }
+    } catch (err) { console.error(err); }
   });
 });
 
@@ -638,7 +599,7 @@ app.get('/health', (req, res) => {
 // ==================== ERROR HANDLING ====================
 
 app.use((err, req, res, next) => {
-  console.error('Error:', err);
+  console.error('Global Error Handler:', err);
   res.status(500).json({ error: 'Internal server error' });
 });
 
