@@ -54,12 +54,12 @@ const Sidebar: React.FC<SidebarProps> = ({
   const [activeTab, setActiveTab] = useState<'chats' | 'groups'>('chats');
   const [searchQuery, setSearchQuery] = useState('');
 
-  const filteredContacts = contacts.filter(contact =>
+  const filteredContacts = (contacts || []).filter(contact =>
     contact.username.toLowerCase().includes(searchQuery.toLowerCase()) ||
     contact.displayName?.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
-  const filteredGroups = groups.filter(group =>
+  const filteredGroups = (groups || []).filter(group =>
     group.name.toLowerCase().includes(searchQuery.toLowerCase())
   );
 

@@ -173,18 +173,20 @@ const ChatApp: React.FC = () => {
   const loadContacts = async () => {
     try {
       const response = await usersAPI.getContacts();
-      setContacts(response.data.contacts);
+      setContacts(response.data.contacts || response.data || []);
     } catch (error) {
       console.error('Failed to load contacts:', error);
+      setContacts([]);
     }
   };
 
   const loadGroups = async () => {
     try {
       const response = await groupsAPI.getMyGroups();
-      setGroups(response.data.groups);
+      setGroups(response.data.groups || response.data || []);
     } catch (error) {
       console.error('Failed to load groups:', error);
+      setGroups([]);
     }
   };
 
@@ -198,9 +200,10 @@ const ChatApp: React.FC = () => {
       } else {
         response = await messagesAPI.getGroupMessages((selectedChat as Group)._id);
       }
-      setMessages(response.data.messages);
+      setMessages(response.data.messages || response.data || []);
     } catch (error) {
       console.error('Failed to load messages:', error);
+      setMessages([]);
     }
   };
 
