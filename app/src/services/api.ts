@@ -22,14 +22,14 @@ api.interceptors.request.use((config) => {
 export const authAPI = {
   register: (username: string, password: string, displayName?: string) =>
     api.post('/auth/register', { username, password, displayName }),
-  
+
   login: (username: string, password: string) =>
     api.post('/auth/login', { username, password }),
-  
+
   getMe: () => api.get('/auth/me'),
-  
+
   logout: () => api.post('/auth/logout'),
-  
+
   updateProfile: (data: { displayName?: string; avatar?: string }) =>
     api.put('/auth/profile', data)
 };
@@ -37,17 +37,17 @@ export const authAPI = {
 // Users API
 export const usersAPI = {
   search: (query: string) => api.get(`/users/search?query=${query}`),
-  
+
   getByUsername: (username: string) => api.get(`/users/${username}`),
-  
-  addContact: (username: string) => api.post('/users/contacts/add', { username }),
-  
+
+  addContact: (userId: string) => api.post(`/users/contacts/${userId}`),
+
   getContacts: () => api.get('/users/contacts/list'),
-  
+
   removeContact: (userId: string) => api.post('/users/contacts/remove', { userId }),
-  
+
   blockUser: (userId: string) => api.post('/users/block', { userId }),
-  
+
   getBlockedUsers: () => api.get('/users/blocked/list')
 };
 
@@ -55,18 +55,18 @@ export const usersAPI = {
 export const messagesAPI = {
   getConversation: (userId: string, page = 1, limit = 50) =>
     api.get(`/messages/conversation/${userId}?page=${page}&limit=${limit}`),
-  
+
   getGroupMessages: (groupId: string, page = 1, limit = 50) =>
     api.get(`/messages/group/${groupId}?page=${page}&limit=${limit}`),
-  
+
   editMessage: (messageId: string, content: string) =>
     api.put(`/messages/${messageId}`, { content }),
-  
+
   deleteMessage: (messageId: string) => api.delete(`/messages/${messageId}`),
-  
+
   addReaction: (messageId: string, emoji: string) =>
     api.post(`/messages/${messageId}/react`, { emoji }),
-  
+
   getUnreadCount: () => api.get('/messages/unread/count')
 };
 
@@ -78,20 +78,20 @@ export const groupsAPI = {
     members?: string[];
     isPrivate?: boolean;
   }) => api.post('/groups/create', data),
-  
-  getMyGroups: () => api.get('/groups/my-groups'),
-  
+
+  getMyGroups: () => api.get('/groups'),
+
   getGroup: (groupId: string) => api.get(`/groups/${groupId}`),
-  
+
   addMember: (groupId: string, userId: string) =>
     api.post(`/groups/${groupId}/add-member`, { userId }),
-  
+
   removeMember: (groupId: string, userId: string) =>
     api.post(`/groups/${groupId}/remove-member`, { userId }),
-  
+
   updateGroup: (groupId: string, data: any) =>
     api.put(`/groups/${groupId}`, data),
-  
+
   joinByLink: (inviteLink: string) => api.post(`/groups/join/${inviteLink}`)
 };
 
@@ -104,16 +104,16 @@ export const stickersAPI = {
     tags?: string[];
     isAnimated?: boolean;
   }) => api.post('/stickers/create', data),
-  
+
   getAll: (page = 1, limit = 50, search?: string) =>
     api.get(`/stickers/all?page=${page}&limit=${limit}${search ? `&search=${search}` : ''}`),
-  
+
   getByPack: (packName: string) => api.get(`/stickers/pack/${packName}`),
-  
+
   getMyStickers: () => api.get('/stickers/my-stickers'),
-  
+
   incrementUsage: (stickerId: string) => api.post(`/stickers/${stickerId}/use`),
-  
+
   delete: (stickerId: string) => api.delete(`/stickers/${stickerId}`)
 };
 
@@ -126,7 +126,7 @@ export const mediaAPI = {
       headers: { 'Content-Type': 'multipart/form-data' }
     });
   },
-  
+
   uploadVideo: (file: File) => {
     const formData = new FormData();
     formData.append('video', file);
@@ -134,7 +134,7 @@ export const mediaAPI = {
       headers: { 'Content-Type': 'multipart/form-data' }
     });
   },
-  
+
   uploadAudio: (file: File) => {
     const formData = new FormData();
     formData.append('audio', file);
@@ -142,7 +142,7 @@ export const mediaAPI = {
       headers: { 'Content-Type': 'multipart/form-data' }
     });
   },
-  
+
   uploadPDF: (file: File) => {
     const formData = new FormData();
     formData.append('pdf', file);
@@ -150,10 +150,10 @@ export const mediaAPI = {
       headers: { 'Content-Type': 'multipart/form-data' }
     });
   },
-  
+
   getInstagramReel: (url: string) =>
     api.post('/media/instagram-reel', { url }),
-  
+
   deleteMedia: (publicId: string, resourceType?: string) =>
     api.delete(`/media/delete/${publicId}?resourceType=${resourceType || 'image'}`)
 };
@@ -162,9 +162,9 @@ export const mediaAPI = {
 export const callsAPI = {
   getHistory: (page = 1, limit = 20) =>
     api.get(`/calls/history?page=${page}&limit=${limit}`),
-  
+
   getCall: (callId: string) => api.get(`/calls/${callId}`),
-  
+
   updateStatus: (callId: string, status: string, duration?: number) =>
     api.put(`/calls/${callId}/status`, { status, duration })
 };

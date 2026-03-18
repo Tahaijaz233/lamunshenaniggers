@@ -8,7 +8,7 @@ import type { User } from '@/types';
 
 interface UserSearchModalProps {
   onClose: () => void;
-  onAddContact: (username: string) => void;
+  onAddContact: (userId: string) => void;
   existingContacts: User[];
 }
 
@@ -47,10 +47,10 @@ const UserSearchModal: React.FC<UserSearchModalProps> = ({
     return () => clearTimeout(timeout);
   }, [searchQuery]);
 
-  const handleAddContact = async (username: string) => {
+  const handleAddContact = async (userId: string) => {
     try {
-      await onAddContact(username);
-      setAddedUsers(prev => [...prev, username]);
+      await onAddContact(userId);
+      setAddedUsers(prev => [...prev, userId]);
     } catch (error) {
       // Error handled in parent
     }
@@ -67,7 +67,7 @@ const UserSearchModal: React.FC<UserSearchModalProps> = ({
 
   return (
     <div className="modal-overlay" onClick={onClose}>
-      <div 
+      <div
         className="bg-[#0a0a0a] border border-[#2d2d2d] rounded-2xl w-full max-w-md max-h-[80vh] flex flex-col"
         onClick={e => e.stopPropagation()}
       >
@@ -117,7 +117,7 @@ const UserSearchModal: React.FC<UserSearchModalProps> = ({
             <div className="space-y-2">
               {(searchResults || []).map((user) => {
                 const isExisting = existingContactIds.includes(user.id);
-                const isAdded = addedUsers.includes(user.username);
+                const isAdded = addedUsers.includes(user.id);
 
                 return (
                   <div
@@ -147,7 +147,7 @@ const UserSearchModal: React.FC<UserSearchModalProps> = ({
                       </Button>
                     ) : (
                       <Button
-                        onClick={() => handleAddContact(user.username)}
+                        onClick={() => handleAddContact(user.id)}
                         className="btn-gold"
                         size="sm"
                       >

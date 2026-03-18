@@ -36,7 +36,7 @@ const ChatApp: React.FC = () => {
     callId?: string;
     offer?: RTCSessionDescriptionInit;
   } | null>(null);
-  
+
   const messagesEndRef = useRef<HTMLDivElement>(null!);
 
   // Load contacts and groups
@@ -55,17 +55,17 @@ const ChatApp: React.FC = () => {
         }
         return [...prev, message];
       });
-      
+
       // Mark as read if in current chat
       if (selectedChat) {
-        const chatId = chatType === 'direct' 
-          ? (selectedChat as User).id 
+        const chatId = chatType === 'direct'
+          ? (selectedChat as User).id
           : (selectedChat as Group)._id;
-        
+
         const isForCurrentChat = chatType === 'direct'
           ? (message.sender.id === chatId || message.recipient === chatId)
           : message.group === chatId;
-        
+
         if (isForCurrentChat) {
           socketService.markRead([message._id]);
         }
@@ -82,19 +82,19 @@ const ChatApp: React.FC = () => {
     };
 
     const handleMessageEdited = (message: Message) => {
-      setMessages(prev => prev.map(m => 
+      setMessages(prev => prev.map(m =>
         m._id === message._id ? message : m
       ));
     };
 
     const handleMessageDeleted = (data: { messageId: string }) => {
-      setMessages(prev => prev.map(m => 
+      setMessages(prev => prev.map(m =>
         m._id === data.messageId ? { ...m, isDeleted: true } : m
       ));
     };
 
     const handleReactionAdded = (data: { messageId: string; reactions: any[] }) => {
-      setMessages(prev => prev.map(m => 
+      setMessages(prev => prev.map(m =>
         m._id === data.messageId ? { ...m, reactions: data.reactions } : m
       ));
     };
@@ -151,13 +151,13 @@ const ChatApp: React.FC = () => {
   useEffect(() => {
     if (selectedChat && chatType) {
       loadMessages();
-      
+
       // Join group room if group chat
       if (chatType === 'group') {
         socketService.joinGroup((selectedChat as Group)._id);
       }
     }
-    
+
     return () => {
       if (selectedChat && chatType === 'group') {
         socketService.leaveGroup((selectedChat as Group)._id);
@@ -192,7 +192,7 @@ const ChatApp: React.FC = () => {
 
   const loadMessages = async () => {
     if (!selectedChat || !chatType) return;
-    
+
     try {
       let response;
       if (chatType === 'direct') {
@@ -244,16 +244,16 @@ const ChatApp: React.FC = () => {
     setChatType(type);
     setMessages([]);
     setReplyingTo(null);
-    
+
     // Close sidebar on mobile
     if (window.innerWidth < 768) {
       setIsSidebarOpen(false);
     }
   };
 
-  const handleAddContact = async (username: string) => {
+  const handleAddContact = async (userId: string) => {
     try {
-      await usersAPI.addContact(username);
+      await usersAPI.addContact(userId);
       toast.success('Contact added successfully');
       loadContacts();
     } catch (error: any) {
