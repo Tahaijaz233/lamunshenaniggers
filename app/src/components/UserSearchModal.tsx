@@ -22,7 +22,7 @@ const UserSearchModal: React.FC<UserSearchModalProps> = ({
   const [isSearching, setIsSearching] = useState(false);
   const [addedUsers, setAddedUsers] = useState<string[]>([]);
 
-  const existingContactIds = existingContacts.map(c => c.id);
+  const existingContactIds = (existingContacts || []).map(c => c.id);
 
   useEffect(() => {
     const searchUsers = async () => {
@@ -34,9 +34,10 @@ const UserSearchModal: React.FC<UserSearchModalProps> = ({
       setIsSearching(true);
       try {
         const response = await usersAPI.search(searchQuery);
-        setSearchResults(response.data.users);
+        setSearchResults(response.data.users || response.data || []);
       } catch (error) {
         console.error('Search error:', error);
+        setSearchResults([]);
       } finally {
         setIsSearching(false);
       }
@@ -108,13 +109,13 @@ const UserSearchModal: React.FC<UserSearchModalProps> = ({
             <div className="text-center py-8">
               <div className="w-8 h-8 border-2 border-[#d4af37] border-t-transparent rounded-full animate-spin mx-auto" />
             </div>
-          ) : searchResults.length === 0 ? (
+          ) : (searchResults || []).length === 0 ? (
             <div className="text-center py-8 text-gray-500">
               <p>No users found</p>
             </div>
           ) : (
             <div className="space-y-2">
-              {searchResults.map((user) => {
+              {(searchResults || []).map((user) => {
                 const isExisting = existingContactIds.includes(user.id);
                 const isAdded = addedUsers.includes(user.username);
 
