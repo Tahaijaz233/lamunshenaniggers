@@ -18,6 +18,7 @@ const allowedOrigins = [
   "http://localhost:5173",
   "http://localhost:3000",
   "https://lamunshenaniggers.vercel.app",
+  "https://lamunshenanigger.app",
   "https://lamunshenanigger.vercel.app",
   process.env.FRONTEND_URL
 ].filter(Boolean);
@@ -37,7 +38,7 @@ cloudinary.config({
   api_secret: process.env.CLOUDINARY_API_SECRET
 });
 
-// CORS middleware configuration - FIXED
+// CORS middleware configuration
 const corsOptions = {
   origin: function (origin, callback) {
     // Allow requests with no origin (like mobile apps or curl requests)
@@ -47,41 +48,20 @@ const corsOptions = {
       callback(null, true);
     } else {
       console.log('CORS blocked origin:', origin);
-      callback(null, true); // Allow all origins in development - change to false in production
+      callback(new Error('Not allowed by CORS'));
     }
   },
   methods: ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
-  allowedHeaders: ["Content-Type", "Authorization", "X-Requested-With", "Accept", "Origin"],
+  allowedHeaders: ["Content-Type", "Authorization", "X-Requested-With", "Accept"],
   credentials: true,
-  preflightContinue: false,
-  optionsSuccessStatus: 204
+  optionsSuccessStatus: 200
 };
 
-// Handle preflight requests for all routes - MUST BE BEFORE OTHER MIDDLEWARE
-app.options('*', cors(corsOptions));
-
-// Apply CORS middleware - MUST BE BEFORE ROUTES
+// Apply CORS middleware
 app.use(cors(corsOptions));
 
-// Additional CORS headers middleware for extra safety
-app.use((req, res, next) => {
-  const origin = req.headers.origin;
-  if (allowedOrigins.includes(origin)) {
-    res.setHeader('Access-Control-Allow-Origin', origin);
-  } else {
-    res.setHeader('Access-Control-Allow-Origin', '*');
-  }
-  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, PATCH, OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With, Accept, Origin');
-  res.setHeader('Access-Control-Allow-Credentials', 'true');
-  
-  // Handle preflight
-  if (req.method === 'OPTIONS') {
-    return res.status(204).end();
-  }
-  
-  next();
-});
+// Handle preflight for all routes
+app.options('*', cors(corsOptions));
 
 app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ extended: true, limit: '50mb' }));
@@ -102,10 +82,10 @@ const connectDB = async () => {
 
 connectDB();
 
-// Import Models (from backend/models folder)
+// Import Models
 const { User, Message, Group, Sticker, Call } = require('./backend/models');
 
-// Import Middleware (from backend/middleware folder)
+// Import Middleware
 const { authMiddleware } = require('./backend/middleware/auth');
 
 // ==================== AUTH ROUTES ====================
@@ -115,13 +95,11 @@ app.post('/api/auth/register', async (req, res) => {
   try {
     const { username, displayName, password } = req.body;
 
-    // Check if user exists
     const existingUser = await User.findOne({ username });
     if (existingUser) {
       return res.status(400).json({ error: 'Username already exists' });
     }
 
-    // Create new user
     const user = new User({
       username,
       displayName: displayName || username,
@@ -154,19 +132,16 @@ app.post('/api/auth/login', async (req, res) => {
   try {
     const { username, password } = req.body;
 
-    // Find user
     const user = await User.findOne({ username });
     if (!user) {
       return res.status(400).json({ error: 'Invalid credentials' });
     }
 
-    // Check password
     const isMatch = await user.comparePassword(password);
     if (!isMatch) {
       return res.status(400).json({ error: 'Invalid credentials' });
     }
 
-    // Update status
     user.status = 'online';
     await user.save();
 
@@ -357,7 +332,6 @@ app.post('/api/messages', authMiddleware, async (req, res) => {
       .populate('sender', 'username displayName avatar')
       .populate('recipient', 'username displayName avatar');
 
-    // Emit to recipient via socket
     const recipientUser = await User.findById(recipient);
     if (recipientUser && recipientUser.socketId) {
       io.to(recipientUser.socketId).emit('new_message', populatedMessage);
@@ -493,7 +467,6 @@ app.post('/api/groups/:id/messages', authMiddleware, async (req, res) => {
     const populatedMessage = await Message.findById(message._id)
       .populate('sender', 'username displayName avatar');
 
-    // Emit to all group members
     group.members.forEach(async (memberId) => {
       const member = await User.findById(memberId);
       if (member && member.socketId && memberId.toString() !== req.user._id.toString()) {
@@ -561,7 +534,6 @@ const onlineUsers = new Map();
 io.on('connection', (socket) => {
   console.log('User connected:', socket.id);
 
-  // User comes online
   socket.on('user_online', async (userId) => {
     try {
       onlineUsers.set(userId, socket.id);
@@ -571,7 +543,6 @@ io.on('connection', (socket) => {
         socketId: socket.id
       });
 
-      // Notify contacts
       const user = await User.findById(userId).populate('contacts');
       if (user) {
         user.contacts.forEach(contact => {
@@ -585,22 +556,18 @@ io.on('connection', (socket) => {
     }
   });
 
-  // Join user room for direct messages
   socket.on('join_user_room', (userId) => {
     socket.join(`user_${userId}`);
   });
 
-  // Join group room
   socket.on('join_group', (groupId) => {
     socket.join(`group_${groupId}`);
   });
 
-  // Leave group room
   socket.on('leave_group', (groupId) => {
     socket.leave(`group_${groupId}`);
   });
 
-  // Typing indicator
   socket.on('typing', ({ recipientId, isTyping }) => {
     socket.to(`user_${recipientId}`).emit('user_typing', {
       userId: socket.userId,
@@ -608,7 +575,6 @@ io.on('connection', (socket) => {
     });
   });
 
-  // Call signaling
   socket.on('call_offer', ({ recipientId, offer, type }) => {
     socket.to(`user_${recipientId}`).emit('incoming_call', {
       callerId: socket.userId,
@@ -633,12 +599,10 @@ io.on('connection', (socket) => {
     socket.to(`user_${recipientId}`).emit('call_ended');
   });
 
-  // Disconnect
   socket.on('disconnect', async () => {
     console.log('User disconnected:', socket.id);
     
     try {
-      // Find user by socket ID
       const user = await User.findOne({ socketId: socket.id });
       if (user) {
         user.status = 'offline';
@@ -646,7 +610,6 @@ io.on('connection', (socket) => {
         user.socketId = null;
         await user.save();
 
-        // Notify contacts
         user.contacts.forEach(contactId => {
           const contactSocketId = onlineUsers.get(contactId.toString());
           if (contactSocketId) {
